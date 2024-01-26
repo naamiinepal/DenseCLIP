@@ -98,9 +98,12 @@ def parse_args():
         os.environ["LOCAL_RANK"] = str(args.local_rank)
 
     if args.options and args.eval_options:
-        raise ValueError(
+        msg = (
             "--options and --eval-options cannot be both "
-            "specified, --options is deprecated in favor of --eval-options",
+            "specified, --options is deprecated in favor of --eval-options"
+        )
+        raise ValueError(
+            msg,
         )
     if args.options:
         warnings.warn("--options is deprecated in favor of --eval-options")
@@ -108,7 +111,7 @@ def parse_args():
     return args
 
 
-def main():
+def main() -> None:
     args = parse_args()
 
     assert args.out or args.eval or args.format_only or args.show or args.show_dir, (
@@ -118,10 +121,12 @@ def main():
     )
 
     if args.eval and args.format_only:
-        raise ValueError("--eval and --format_only cannot be both specified")
+        msg = "--eval and --format_only cannot be both specified"
+        raise ValueError(msg)
 
     if args.out is not None and not args.out.endswith((".pkl", ".pickle")):
-        raise ValueError("The output file must be a pkl file.")
+        msg = "The output file must be a pkl file."
+        raise ValueError(msg)
 
     cfg = Config.fromfile(args.config)
     if args.cfg_options is not None:
@@ -188,10 +193,7 @@ def main():
         model = fuse_conv_bn(model)
     # old versions did not save class info in checkpoints, this walkaround is
     # for backward compatibility
-    if "CLASSES" in checkpoint["meta"]:
-        model.CLASSES = checkpoint["meta"]["CLASSES"]
-    else:
-        model.CLASSES = dataset.CLASSES
+    model.CLASSES = checkpoint["meta"].get("CLASSES", dataset.CLASSES)
 
     if not distributed:
         model = MMDataParallel(model, device_ids=[0])

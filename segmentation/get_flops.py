@@ -1,4 +1,5 @@
 import argparse
+import contextlib
 
 import torch
 from fvcore.nn import FlopCountAnalysis
@@ -19,10 +20,8 @@ def calc_flops(model, img_size=224):
         except:
             pass
 
-        try:
+        with contextlib.suppress(Exception):
             print("neck:", fca1.total(module_name="neck") / 1e9)
-        except:
-            pass
         print("decode_head:", fca1.total(module_name="decode_head") / 1e9)
         flops1 = fca1.total()
         print(f"#### GFLOPs: {flops1 / 1e9:.1f}")
@@ -40,19 +39,19 @@ def parse_args():
         default=[1024, 1024],
         help="input image size",
     )
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
-def main():
+def main() -> None:
     args = parse_args()
 
     if len(args.shape) == 1:
         input_shape = (3, args.shape[0], args.shape[0])
     elif len(args.shape) == 2:
-        input_shape = (3,) + tuple(args.shape)
+        input_shape = (3, *tuple(args.shape))
     else:
-        raise ValueError("invalid input shape")
+        msg = "invalid input shape"
+        raise ValueError(msg)
 
     cfg = Config.fromfile(args.config)
     cfg.model.pretrained = None
@@ -71,10 +70,11 @@ def main():
     if hasattr(model, "forward_dummy"):
         model.forward = model.forward_dummy
     else:
+        msg = "FLOPs counter is currently not currently supported with {}".format(
+            model.__class__.__name__,
+        )
         raise NotImplementedError(
-            "FLOPs counter is currently not currently supported with {}".format(
-                model.__class__.__name__,
-            ),
+            msg,
         )
 
     if args.fvcore:

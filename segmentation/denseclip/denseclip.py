@@ -41,8 +41,8 @@ class DenseCLIP(BaseSegmentor):
         token_embed_dim=512,
         text_dim=1024,
         **args,
-    ):
-        super(DenseCLIP, self).__init__(init_cfg)
+    ) -> None:
+        super().__init__(init_cfg)
         if pretrained is not None:
             assert (
                 backbone.get("pretrained") is None
@@ -100,14 +100,14 @@ class DenseCLIP(BaseSegmentor):
 
         assert self.with_decode_head
 
-    def _init_decode_head(self, decode_head):
-        """Initialize ``decode_head``"""
+    def _init_decode_head(self, decode_head) -> None:
+        """Initialize ``decode_head``."""
         self.decode_head = builder.build_head(decode_head)
         self.align_corners = self.decode_head.align_corners
         self.num_classes = self.decode_head.num_classes
 
-    def _init_auxiliary_head(self, auxiliary_head):
-        """Initialize ``auxiliary_head``"""
+    def _init_auxiliary_head(self, auxiliary_head) -> None:
+        """Initialize ``auxiliary_head``."""
         if auxiliary_head is not None:
             if isinstance(auxiliary_head, list):
                 self.auxiliary_head = nn.ModuleList()
@@ -116,22 +116,21 @@ class DenseCLIP(BaseSegmentor):
             else:
                 self.auxiliary_head = builder.build_head(auxiliary_head)
 
-    def _init_identity_head(self, identity_head):
-        """Initialize ``auxiliary_head``"""
+    def _init_identity_head(self, identity_head) -> None:
+        """Initialize ``auxiliary_head``."""
         if identity_head is not None:
             self.with_identity_head = True
             self.identity_head = builder.build_head(identity_head)
 
     def extract_feat(self, img):
         """Extract features from images."""
-        x = self.backbone(img)
-        return x
+        return self.backbone(img)
 
     def _decode_head_forward_train(self, x, img_metas, gt_semantic_seg):
         """Run forward function and calculate loss for decode head in
         training.
         """
-        losses = dict()
+        losses = {}
         loss_decode = self.decode_head.forward_train(
             x,
             img_metas,
@@ -146,14 +145,13 @@ class DenseCLIP(BaseSegmentor):
         """Run forward function and calculate loss for decode head in
         inference.
         """
-        seg_logits = self.decode_head.forward_test(x, img_metas, self.test_cfg)
-        return seg_logits
+        return self.decode_head.forward_test(x, img_metas, self.test_cfg)
 
     def _auxiliary_head_forward_train(self, x, img_metas, gt_semantic_seg):
         """Run forward function and calculate loss for auxiliary head in
         training.
         """
-        losses = dict()
+        losses = {}
         if isinstance(self.auxiliary_head, nn.ModuleList):
             for idx, aux_head in enumerate(self.auxiliary_head):
                 loss_aux = aux_head.forward_train(
@@ -178,7 +176,7 @@ class DenseCLIP(BaseSegmentor):
         """Run forward function and calculate loss for auxiliary head in
         training.
         """
-        losses = dict()
+        losses = {}
         loss_aux = self.identity_head.forward_train(
             x,
             img_metas,
@@ -190,9 +188,7 @@ class DenseCLIP(BaseSegmentor):
 
     def forward_dummy(self, img):
         """Dummy forward function."""
-        seg_logit = self.encode_decode(img, None)
-
-        return seg_logit
+        return self.encode_decode(img, None)
 
     def after_extract_feat(self, x):
         x_orig = list(x[0:4])
@@ -253,13 +249,8 @@ class DenseCLIP(BaseSegmentor):
             x_orig = list(self.neck(x_orig))
             _x_orig = x_orig
 
-        losses = dict()
-        if self.text_head:
-            x = [
-                text_embeddings,
-            ] + x_orig
-        else:
-            x = x_orig
+        losses = {}
+        x = [text_embeddings, *x_orig] if self.text_head else x_orig
 
         loss_decode = self._decode_head_forward_train(x, img_metas, gt_semantic_seg)
         losses.update(loss_decode)
@@ -294,23 +285,17 @@ class DenseCLIP(BaseSegmentor):
         if self.with_neck:
             x_orig = list(self.neck(x_orig))
 
-        if self.text_head:
-            x = [
-                text_embeddings,
-            ] + x_orig
-        else:
-            x = x_orig
+        x = [text_embeddings, *x_orig] if self.text_head else x_orig
         # print('text_embedding=', text_embeddings[0])
         out = self._decode_head_forward_test(x, img_metas)
         # print('cls_map=', out[0,:,40, 40])
 
-        out = resize(
+        return resize(
             input=out,
             size=img.shape[2:],
             mode="bilinear",
             align_corners=self.align_corners,
         )
-        return out
 
     # TODO refactor
     def slide_inference(self, img, img_meta, rescale):
@@ -429,12 +414,10 @@ class DenseCLIP(BaseSegmentor):
         seg_pred = seg_logit.argmax(dim=1)
         if torch.onnx.is_in_onnx_export():
             # our inference backend only support 4D output
-            seg_pred = seg_pred.unsqueeze(0)
-            return seg_pred
+            return seg_pred.unsqueeze(0)
         seg_pred = seg_pred.cpu().numpy()
         # unravel batch dim
-        seg_pred = list(seg_pred)
-        return seg_pred
+        return list(seg_pred)
 
     def aug_test(self, imgs, img_metas, rescale=True):
         """Test with augmentations.
@@ -451,5 +434,4 @@ class DenseCLIP(BaseSegmentor):
         seg_logit /= len(imgs)
         seg_pred = seg_logit.argmax(dim=1)
         seg_pred = seg_pred.cpu().numpy()
-        seg_pred = list(seg_pred)
-        return seg_pred
+        return list(seg_pred)

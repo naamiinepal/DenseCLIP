@@ -82,7 +82,7 @@ def parse_args():
     return args
 
 
-def main():
+def main() -> None:
     args = parse_args()
 
     assert args.out or args.eval or args.format_only or args.show or args.show_dir, (
@@ -92,10 +92,12 @@ def main():
     )
 
     if args.eval and args.format_only:
-        raise ValueError("--eval and --format_only cannot be both specified")
+        msg = "--eval and --format_only cannot be both specified"
+        raise ValueError(msg)
 
     if args.out is not None and not args.out.endswith((".pkl", ".pickle")):
-        raise ValueError("The output file must be a pkl file.")
+        msg = "The output file must be a pkl file."
+        raise ValueError(msg)
 
     cfg = mmcv.Config.fromfile(args.config)
     if args.options is not None:

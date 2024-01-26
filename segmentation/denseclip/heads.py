@@ -15,8 +15,8 @@ class IdentityHead(BaseDecodeHead):
             one is of largest resolution.
     """
 
-    def __init__(self, **kwargs):
-        super(IdentityHead, self).__init__(input_transform=None, **kwargs)
+    def __init__(self, **kwargs) -> None:
+        super().__init__(input_transform=None, **kwargs)
         self.conv_seg = None
 
     def forward(self, inputs):

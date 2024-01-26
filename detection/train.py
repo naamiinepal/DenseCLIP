@@ -77,9 +77,12 @@ def parse_args():
         os.environ["LOCAL_RANK"] = str(args.local_rank)
 
     if args.options and args.cfg_options:
-        raise ValueError(
+        msg = (
             "--options and --cfg-options cannot be both "
-            "specified, --options is deprecated in favor of --cfg-options",
+            "specified, --options is deprecated in favor of --cfg-options"
+        )
+        raise ValueError(
+            msg,
         )
     if args.options:
         warnings.warn("--options is deprecated in favor of --cfg-options")
@@ -88,7 +91,7 @@ def parse_args():
     return args
 
 
-def main():
+def main() -> None:
     print("uname:", os.uname().nodename)
     print("pid:", os.getpid())
     args = parse_args()
@@ -143,7 +146,7 @@ def main():
 
     # init the meta dict to record some important information such as
     # environment info and seed, which will be logged
-    meta = dict()
+    meta = {}
     # log env info
     env_info_dict = collect_env()
     env_info = "\n".join([(f"{k}: {v}") for k, v in env_info_dict.items()])
@@ -173,10 +176,10 @@ def main():
     if cfg.checkpoint_config is not None:
         # save mmdet version, config file content and class names in
         # checkpoints as meta data
-        cfg.checkpoint_config.meta = dict(
-            mmdet_version=__version__ + get_git_hash()[:7],
-            CLASSES=datasets[0].CLASSES,
-        )
+        cfg.checkpoint_config.meta = {
+            "mmdet_version": __version__ + get_git_hash()[:7],
+            "CLASSES": datasets[0].CLASSES,
+        }
 
     if "DenseCLIP" in cfg.model.type:
         cfg.model.class_names = list(datasets[0].CLASSES)

@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from typing import Optional
 
 import torch
 import torch.nn.functional as F
@@ -10,7 +11,7 @@ from torch import nn
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, inplanes, planes, stride=1):
+    def __init__(self, inplanes, planes, stride=1) -> None:
         super().__init__()
 
         # all conv layers have stride 1. an avgpool is performed after the second convolution when stride > 1
@@ -62,8 +63,7 @@ class Bottleneck(nn.Module):
             identity = self.downsample(x)
 
         out += identity
-        out = self.relu(out)
-        return out
+        return self.relu(out)
 
 
 class AttentionPool2d(nn.Module):
@@ -72,8 +72,8 @@ class AttentionPool2d(nn.Module):
         spacial_dim: int,
         embed_dim: int,
         num_heads: int,
-        output_dim: int = None,
-    ):
+        output_dim: Optional[int] = None,
+    ) -> None:
         super().__init__()
         self.positional_embedding = nn.Parameter(
             torch.randn(spacial_dim**2 + 1, embed_dim) / embed_dim**0.5,
@@ -142,7 +142,7 @@ class CLIPResNet(nn.Module):
     """A ResNet class that is similar to torchvision's but contains the following changes:
     - There are now 3 "stem" convolutions as opposed to 1, with an average pool instead of a max pool.
     - Performs anti-aliasing strided convolutions, where an avgpool is prepended to convolutions with stride > 1
-    - The final pooling layer is a QKV attention instead of an average pool
+    - The final pooling layer is a QKV attention instead of an average pool.
     """
 
     def __init__(
@@ -153,7 +153,7 @@ class CLIPResNet(nn.Module):
         width=64,
         pretrained=None,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__()
         self.pretrained = pretrained
         self.output_dim = output_dim
@@ -189,7 +189,7 @@ class CLIPResNet(nn.Module):
         self.layer3 = self._make_layer(width * 4, layers[2], stride=2)
         self.layer4 = self._make_layer(width * 8, layers[3], stride=2)
 
-    def init_weights(self, pretrained=None):
+    def init_weights(self, pretrained=None) -> None:
         pretrained = pretrained or self.pretrained
         if isinstance(pretrained, str):
             checkpoint = (
@@ -198,7 +198,7 @@ class CLIPResNet(nn.Module):
 
             state_dict = {}
 
-            for k in checkpoint.keys():
+            for k in checkpoint:
                 if k.startswith("visual."):
                     new_k = k.replace("visual.", "")
                     state_dict[new_k] = checkpoint[k]
@@ -223,8 +223,7 @@ class CLIPResNet(nn.Module):
                 (self.conv3, self.bn3),
             ]:
                 x = self.relu(bn(conv(x)))
-            x = self.avgpool(x)
-            return x
+            return self.avgpool(x)
 
         x = x.type(self.conv1.weight.dtype)
         x = stem(x)
@@ -247,7 +246,7 @@ class CLIPResNetWithAttention(nn.Module):
     """A ResNet class that is similar to torchvision's but contains the following changes:
     - There are now 3 "stem" convolutions as opposed to 1, with an average pool instead of a max pool.
     - Performs anti-aliasing strided convolutions, where an avgpool is prepended to convolutions with stride > 1
-    - The final pooling layer is a QKV attention instead of an average pool
+    - The final pooling layer is a QKV attention instead of an average pool.
     """
 
     def __init__(
@@ -260,7 +259,7 @@ class CLIPResNetWithAttention(nn.Module):
         att_level3=False,
         baseline=False,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__()
         self.pretrained = pretrained
         self.output_dim = output_dim
@@ -306,7 +305,7 @@ class CLIPResNetWithAttention(nn.Module):
         self.att_level3 = att_level3
         self.baseline = baseline
 
-    def init_weights(self, pretrained=None):
+    def init_weights(self, pretrained=None) -> None:
         pretrained = pretrained or self.pretrained
         if isinstance(pretrained, str):
             checkpoint = (
@@ -315,7 +314,7 @@ class CLIPResNetWithAttention(nn.Module):
 
             state_dict = {}
 
-            for k in checkpoint.keys():
+            for k in checkpoint:
                 if k.startswith("visual."):
                     new_k = k.replace("visual.", "")
                     state_dict[new_k] = checkpoint[k]
@@ -371,8 +370,7 @@ class CLIPResNetWithAttention(nn.Module):
                 (self.conv3, self.bn3),
             ]:
                 x = self.relu(bn(conv(x)))
-            x = self.avgpool(x)
-            return x
+            return self.avgpool(x)
 
         x = x.type(self.conv1.weight.dtype)
         x = stem(x)
@@ -415,8 +413,8 @@ class QuickGELU(nn.Module):
 class DropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks)."""
 
-    def __init__(self, drop_prob=None):
-        super(DropPath, self).__init__()
+    def __init__(self, drop_prob=None) -> None:
+        super().__init__()
         self.drop_prob = drop_prob
 
     def forward(self, x):
@@ -433,7 +431,7 @@ class ResidualAttentionBlock(nn.Module):
         n_head: int,
         attn_mask: torch.Tensor = None,
         drop_path=0.0,
-    ):
+    ) -> None:
         super().__init__()
 
         self.attn = nn.MultiheadAttention(d_model, n_head)
@@ -462,8 +460,7 @@ class ResidualAttentionBlock(nn.Module):
 
     def forward(self, x: torch.Tensor):
         x = x + self.drop_path(self.attention(self.ln_1(x)))
-        x = x + self.drop_path(self.mlp(self.ln_2(x)))
-        return x
+        return x + self.drop_path(self.mlp(self.ln_2(x)))
 
 
 class Transformer(nn.Module):
@@ -474,7 +471,7 @@ class Transformer(nn.Module):
         heads: int,
         attn_mask: torch.Tensor = None,
         drop_path_rate=0.0,
-    ):
+    ) -> None:
         super().__init__()
         self.width = width
         self.layers = layers
@@ -501,7 +498,7 @@ class Attention(nn.Module):
         qk_scale=None,
         attn_drop=0.0,
         proj_drop=0.0,
-    ):
+    ) -> None:
         super().__init__()
         self.num_heads = num_heads
         head_dim = dim // num_heads
@@ -531,8 +528,7 @@ class Attention(nn.Module):
         x = torch.einsum("bknm,bmkc->bnkc", attn, v).reshape(B, N, C)
 
         x = self.proj(x)
-        x = self.proj_drop(x)
-        return x
+        return self.proj_drop(x)
 
 
 class TransformerDecoderLayer(nn.Module):
@@ -541,7 +537,7 @@ class TransformerDecoderLayer(nn.Module):
         d_model,
         nhead,
         dropout=0.1,
-    ):
+    ) -> None:
         super().__init__()
         self.self_attn = Attention(d_model, nhead, proj_drop=dropout)
         self.cross_attn = Attention(d_model, nhead, proj_drop=dropout)
@@ -563,8 +559,7 @@ class TransformerDecoderLayer(nn.Module):
         x = x + self.self_attn(q, k, v)
         q = self.norm2(x)
         x = x + self.cross_attn(q, mem, mem)
-        x = x + self.dropout(self.mlp(self.norm3(x)))
-        return x
+        return x + self.dropout(self.mlp(self.norm3(x)))
 
 
 @BACKBONES.register_module()
@@ -577,10 +572,12 @@ class CLIPVisionTransformer(nn.Module):
         layers=12,
         heads=12,
         output_dim=512,
-        out_indices=[3, 5, 7, 11],
+        out_indices=None,
         pretrained=None,
         **kwargs,
-    ):
+    ) -> None:
+        if out_indices is None:
+            out_indices = [3, 5, 7, 11]
         super().__init__()
         self.pretrained = pretrained
         self.input_resolution = input_resolution
@@ -646,7 +643,7 @@ class CLIPVisionTransformer(nn.Module):
                 nn.MaxPool2d(kernel_size=4, stride=4),
             )
 
-    def init_weights(self, pretrained=None):
+    def init_weights(self, pretrained=None) -> None:
         pretrained = pretrained or self.pretrained
         if isinstance(pretrained, str):
             checkpoint = (
@@ -655,12 +652,12 @@ class CLIPVisionTransformer(nn.Module):
 
             state_dict = {}
 
-            for k in checkpoint.keys():
+            for k in checkpoint:
                 if k.startswith("visual."):
                     new_k = k.replace("visual.", "")
                     state_dict[new_k] = checkpoint[k]
 
-            if "positional_embedding" in state_dict.keys():
+            if "positional_embedding" in state_dict:
                 if (
                     self.positional_embedding.shape
                     != state_dict["positional_embedding"].shape
@@ -752,7 +749,7 @@ class CLIPTextEncoder(nn.Module):
         out_dim=256,
         pretrained=None,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__()
 
         self.pretrained = pretrained
@@ -774,7 +771,7 @@ class CLIPTextEncoder(nn.Module):
         self.ln_final = LayerNorm(transformer_width)
         self.text_projection = nn.Parameter(torch.empty(transformer_width, embed_dim))
 
-    def init_weights(self, pretrained=None):
+    def init_weights(self, pretrained=None) -> None:
         pretrained = pretrained or self.pretrained
         if isinstance(pretrained, str):
             checkpoint = (
@@ -783,15 +780,14 @@ class CLIPTextEncoder(nn.Module):
 
             state_dict = {}
 
-            for k in checkpoint.keys():
+            for k in checkpoint:
                 if k.startswith("transformer."):
                     state_dict[k] = checkpoint[k]
 
                 if (
                     k == "positional_embedding"
                     or k == "text_projection"
-                    or k.startswith("token_embedding")
-                    or k.startswith("ln_final")
+                    or k.startswith(("token_embedding", "ln_final"))
                 ):
                     if (
                         k == "positional_embedding"
@@ -822,9 +818,8 @@ class CLIPTextEncoder(nn.Module):
         x = self.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x)
-        x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
+        return x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
         # x = self.out_proj(x)
-        return x
 
 
 @BACKBONES.register_module()
@@ -840,7 +835,7 @@ class CLIPTextContextEncoder(nn.Module):
         out_dim=256,
         pretrained=None,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__()
 
         self.pretrained = pretrained
@@ -864,7 +859,7 @@ class CLIPTextContextEncoder(nn.Module):
         self.ln_final = LayerNorm(transformer_width)
         self.text_projection = nn.Parameter(torch.empty(transformer_width, embed_dim))
 
-    def init_weights(self, pretrained=None):
+    def init_weights(self, pretrained=None) -> None:
         pretrained = pretrained or self.pretrained
         if isinstance(pretrained, str):
             checkpoint = (
@@ -873,15 +868,14 @@ class CLIPTextContextEncoder(nn.Module):
 
             state_dict = {}
 
-            for k in checkpoint.keys():
+            for k in checkpoint:
                 if k.startswith("transformer."):
                     state_dict[k] = checkpoint[k]
 
                 if (
                     k == "positional_embedding"
                     or k == "text_projection"
-                    or k.startswith("token_embedding")
-                    or k.startswith("ln_final")
+                    or k.startswith(("token_embedding", "ln_final"))
                 ):
                     if (
                         k == "positional_embedding"
@@ -928,11 +922,10 @@ class CLIPTextContextEncoder(nn.Module):
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x)
         x = x[torch.arange(x.shape[0]), eos_indx] @ self.text_projection
-        x = x.reshape(B, K, self.embed_dim)
-        return x
+        return x.reshape(B, K, self.embed_dim)
 
 
-def print_model_info(state_dict: dict):
+def print_model_info(state_dict: dict) -> None:
     vit = "visual.proj" in state_dict
 
     if vit:
@@ -940,7 +933,7 @@ def print_model_info(state_dict: dict):
         vision_layers = len(
             [
                 k
-                for k in state_dict.keys()
+                for k in state_dict
                 if k.startswith("visual.") and k.endswith(".attn.in_proj_weight")
             ],
         )
@@ -952,11 +945,11 @@ def print_model_info(state_dict: dict):
     else:
         counts: list = [
             len(
-                set(
+                {
                     k.split(".")[2]
                     for k in state_dict
                     if k.startswith(f"visual.layer{b}")
-                ),
+                },
             )
             for b in [1, 2, 3, 4]
         ]
@@ -978,9 +971,7 @@ def print_model_info(state_dict: dict):
     transformer_width = state_dict["ln_final.weight"].shape[0]
     transformer_heads = transformer_width // 64
     transformer_layers = len(
-        set(
-            k.split(".")[2] for k in state_dict if k.startswith("transformer.resblocks")
-        ),
+        {k.split(".")[2] for k in state_dict if k.startswith("transformer.resblocks")},
     )
 
     print(
@@ -1014,7 +1005,7 @@ class ContextDecoder(nn.Module):
         visual_dim=1024,
         dropout=0.1,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__()
 
         self.memory_proj = nn.Sequential(
@@ -1042,7 +1033,7 @@ class ContextDecoder(nn.Module):
 
         self.apply(self._init_weights)
 
-    def _init_weights(self, m):
+    def _init_weights(self, m) -> None:
         if isinstance(m, nn.Linear):
             trunc_normal_(m.weight, std=0.02)
             if isinstance(m, nn.Linear) and m.bias is not None:

@@ -4,6 +4,7 @@ import os
 import os.path as osp
 import time
 
+import denseclip  # noqa
 import mmcv
 import torch
 from mmcv.runner import init_dist
@@ -13,8 +14,6 @@ from mmseg.apis import set_random_seed, train_segmentor
 from mmseg.datasets import build_dataset
 from mmseg.models import build_segmentor
 from mmseg.utils import collect_env, get_root_logger
-
-import denseclip  # noqa
 
 
 def parse_args():
@@ -67,7 +66,7 @@ def parse_args():
     return args
 
 
-def main():
+def main() -> None:
     args = parse_args()
 
     cfg = Config.fromfile(args.config)
@@ -114,7 +113,7 @@ def main():
 
     # init the meta dict to record some important information such as
     # environment info and seed, which will be logged
-    meta = dict()
+    meta = {}
     # log env info
     env_info_dict = collect_env()
     env_info = "\n".join([f"{k}: {v}" for k, v in env_info_dict.items()])
@@ -166,12 +165,12 @@ def main():
     if cfg.checkpoint_config is not None:
         # save mmseg version, config file content and class names in
         # checkpoints as meta data
-        cfg.checkpoint_config.meta = dict(
-            mmseg_version=f"{__version__}+{get_git_hash()[:7]}",
-            config=cfg.pretty_text,
-            CLASSES=datasets[0].CLASSES,
-            PALETTE=datasets[0].PALETTE,
-        )
+        cfg.checkpoint_config.meta = {
+            "mmseg_version": f"{__version__}+{get_git_hash()[:7]}",
+            "config": cfg.pretty_text,
+            "CLASSES": datasets[0].CLASSES,
+            "PALETTE": datasets[0].PALETTE,
+        }
     # add an attribute for visualization convenience
     model.CLASSES = datasets[0].CLASSES
     if args.finetune:

@@ -63,12 +63,11 @@ def basic_clean(text):
 
 def whitespace_clean(text):
     text = re.sub(r"\s+", " ", text)
-    text = text.strip()
-    return text
+    return text.strip()
 
 
 class SimpleTokenizer:
-    def __init__(self, bpe_path: str = default_bpe()):
+    def __init__(self, bpe_path: str = default_bpe()) -> None:
         self.byte_encoder = bytes_to_unicode()
         self.byte_decoder = {v: k for k, v in self.byte_encoder.items()}
         merges = gzip.open(bpe_path).read().decode("utf-8").split("\n")
@@ -94,7 +93,7 @@ class SimpleTokenizer:
     def bpe(self, token):
         if token in self.cache:
             return self.cache[token]
-        word = tuple(token[:-1]) + (token[-1] + "</w>",)
+        word = (*tuple(token[:-1]), token[-1] + "</w>")
         pairs = get_pairs(word)
 
         if not pairs:
@@ -144,12 +143,11 @@ class SimpleTokenizer:
 
     def decode(self, tokens):
         text = "".join([self.decoder[token] for token in tokens])
-        text = (
+        return (
             bytearray([self.byte_decoder[c] for c in text])
             .decode("utf-8", errors="replace")
             .replace("</w>", " ")
         )
-        return text
 
 
 _tokenizer = SimpleTokenizer()
@@ -160,7 +158,7 @@ def tokenize(
     context_length: int = 77,
     truncate: bool = False,
 ) -> torch.LongTensor:
-    """Returns the tokenized representation of given input string(s)
+    """Returns the tokenized representation of given input string(s).
 
     Parameters
     ----------
@@ -180,7 +178,7 @@ def tokenize(
 
     sot_token = _tokenizer.encoder["<|startoftext|>"]
     eot_token = _tokenizer.encoder["<|endoftext|>"]
-    all_tokens = [[sot_token] + _tokenizer.encode(text) + [eot_token] for text in texts]
+    all_tokens = [[sot_token, *_tokenizer.encode(text), eot_token] for text in texts]
     result = torch.zeros(len(all_tokens), context_length, dtype=torch.long)
 
     for i, tokens in enumerate(all_tokens):
@@ -189,8 +187,11 @@ def tokenize(
                 tokens = tokens[:context_length]
                 tokens[-1] = eot_token
             else:
+                msg = (
+                    f"Input {texts[i]} is too long for context length {context_length}"
+                )
                 raise RuntimeError(
-                    f"Input {texts[i]} is too long for context length {context_length}",
+                    msg,
                 )
         result[i, : len(tokens)] = torch.tensor(tokens)
 

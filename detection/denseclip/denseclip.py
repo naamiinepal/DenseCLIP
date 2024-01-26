@@ -13,7 +13,7 @@ from .untils import tokenize
 
 @DETECTORS.register_module()
 class DenseCLIP_RetinaNet(SingleStageDetector):
-    """DenseCLIP for RetinaNet"""
+    """DenseCLIP for RetinaNet."""
 
     def __init__(
         self,
@@ -33,7 +33,7 @@ class DenseCLIP_RetinaNet(SingleStageDetector):
         seg_loss=False,
         clip_head=True,
         init_cfg=None,
-    ):
+    ) -> None:
         # super().__init__(init_cfg)
         super(SingleStageDetector, self).__init__(init_cfg)
         if pretrained is not None:
@@ -98,14 +98,13 @@ class DenseCLIP_RetinaNet(SingleStageDetector):
             torch.einsum("bchw,bkc->bkhw", visual_embeddings, text_features) / self.tau
         )
         score_map0 = F.upsample(score_map3, x[0].shape[2:], mode="bilinear")
-        score_maps = [score_map0, None, None, score_map3]
-        return score_maps
+        return [score_map0, None, None, score_map3]
 
     def compute_text_features(self, x, dummy=False):
         """Compute text features to each of x
         Args:
             x ([list]): list of features from the backbone,
-                x[4] is the output of attentionpool2d
+                x[4] is the output of attentionpool2d.
         """
         global_feat, visual_embeddings = x[4]
 
@@ -129,16 +128,14 @@ class DenseCLIP_RetinaNet(SingleStageDetector):
                 self.contexts,
             ).expand(B, -1, -1)
         text_diff = self.context_decoder(text_embeddings, visual_context)
-        text_embeddings = text_embeddings + self.gamma * text_diff
-        return text_embeddings
+        return text_embeddings + self.gamma * text_diff
 
     def forward_dummy(self, img):
         """Used for computing network flops.
-        See `mmdetection/tools/analysis_tools/get_flops.py`
+        See `mmdetection/tools/analysis_tools/get_flops.py`.
         """
         x = self.extract_feat(img, dummy=True)
-        outs = self.bbox_head(x)
-        return outs
+        return self.bbox_head(x)
 
     def forward_train(
         self,
@@ -197,8 +194,7 @@ class DenseCLIP_RetinaNet(SingleStageDetector):
             weight=mask,
             reduction="sum",
         )
-        loss = loss / mask.sum()
-        return loss
+        return loss / mask.sum()
 
     def build_seg_target(self, img, img_metas, gt_bboxes, gt_labels):
         B, C, H, W = img.shape
@@ -238,11 +234,10 @@ class DenseCLIP_RetinaNet(SingleStageDetector):
         """
         feat = self.extract_feat(img)
         results_list = self.bbox_head.simple_test(feat, img_metas, rescale=rescale)
-        bbox_results = [
+        return [
             bbox2result(det_bboxes, det_labels, self.bbox_head.num_classes)
             for det_bboxes, det_labels in results_list
         ]
-        return bbox_results
 
     def aug_test(self, imgs, img_metas, rescale=False):
         """Test function with test time augmentation.
@@ -271,11 +266,10 @@ class DenseCLIP_RetinaNet(SingleStageDetector):
 
         feats = self.extract_feats(imgs)
         results_list = self.bbox_head.aug_test(feats, img_metas, rescale=rescale)
-        bbox_results = [
+        return [
             bbox2result(det_bboxes, det_labels, self.bbox_head.num_classes)
             for det_bboxes, det_labels in results_list
         ]
-        return bbox_results
 
     def onnx_export(self, img, img_metas, with_nms=True):
         """Test function without test time augmentation.
@@ -317,7 +311,7 @@ class DenseCLIP_RetinaNet(SingleStageDetector):
 
 @DETECTORS.register_module()
 class DenseCLIP_MaskRCNN(TwoStageDetector):
-    """DenseCLIP for Mask-RCNN"""
+    """DenseCLIP for Mask-RCNN."""
 
     def __init__(
         self,
@@ -340,7 +334,7 @@ class DenseCLIP_MaskRCNN(TwoStageDetector):
         test_cfg=None,
         pretrained=None,
         init_cfg=None,
-    ):
+    ) -> None:
         super(TwoStageDetector, self).__init__(init_cfg)
         if pretrained is not None:
             assert (
@@ -396,12 +390,12 @@ class DenseCLIP_MaskRCNN(TwoStageDetector):
 
     @property
     def with_rpn(self):
-        """bool: whether the detector has RPN"""
+        """bool: whether the detector has RPN."""
         return hasattr(self, "rpn_head") and self.rpn_head is not None
 
     @property
     def with_roi_head(self):
-        """bool: whether the detector has a RoI head"""
+        """bool: whether the detector has a RoI head."""
         return hasattr(self, "roi_head") and self.roi_head is not None
 
     def extract_feat(self, img, use_seg_loss=False, dummy=False):
@@ -428,14 +422,13 @@ class DenseCLIP_MaskRCNN(TwoStageDetector):
             torch.einsum("bchw,bkc->bkhw", visual_embeddings, text_features) / self.tau
         )
         score_map0 = F.upsample(score_map3, x[0].shape[2:], mode="bilinear")
-        score_maps = [score_map0, None, None, score_map3]
-        return score_maps
+        return [score_map0, None, None, score_map3]
 
     def compute_text_features(self, x, dummy=False):
         """Compute text features to each of x
         Args:
             x ([list]): list of features from the backbone,
-                x[4] is the output of attentionpool2d
+                x[4] is the output of attentionpool2d.
         """
         global_feat, visual_embeddings = x[4]
 
@@ -460,13 +453,11 @@ class DenseCLIP_MaskRCNN(TwoStageDetector):
                 self.contexts,
             ).expand(B, -1, -1)
         text_diff = self.context_decoder(text_embeddings, visual_context)
-        text_embeddings = text_embeddings + self.gamma * text_diff
-
-        return text_embeddings
+        return text_embeddings + self.gamma * text_diff
 
     def forward_dummy(self, img):
         """Used for computing network flops.
-        See `mmdetection/tools/analysis_tools/get_flops.py`
+        See `mmdetection/tools/analysis_tools/get_flops.py`.
         """
         outs = ()
         # backbone
@@ -474,12 +465,11 @@ class DenseCLIP_MaskRCNN(TwoStageDetector):
         # rpn
         if self.with_rpn:
             rpn_outs = self.rpn_head(x)
-            outs = outs + (rpn_outs,)
+            outs = (*outs, rpn_outs)
         proposals = torch.randn(1000, 4).to(img.device)
         # roi_head
         roi_outs = self.roi_head.forward_dummy(x, proposals)
-        outs = outs + (roi_outs,)
-        return outs
+        return (*outs, roi_outs)
 
     def forward_train(
         self,
@@ -519,7 +509,7 @@ class DenseCLIP_MaskRCNN(TwoStageDetector):
         if self.use_seg_loss:
             x, score_map = x
 
-        losses = dict()
+        losses = {}
 
         # RPN forward and loss
         if self.with_rpn:
@@ -585,8 +575,7 @@ class DenseCLIP_MaskRCNN(TwoStageDetector):
             reduction="sum",
         )
         loss = loss / mask.sum()
-        loss = {"loss_aux_seg": loss}
-        return loss
+        return {"loss_aux_seg": loss}
 
     def build_seg_target(self, img, img_metas, gt_bboxes, gt_masks, gt_labels):
         B, C, H, W = img.shape
@@ -653,9 +642,12 @@ class DenseCLIP_MaskRCNN(TwoStageDetector):
         if hasattr(self.roi_head, "onnx_export"):
             return self.roi_head.onnx_export(x, proposals, img_metas)
         else:
-            raise NotImplementedError(
+            msg = (
                 f"{self.__class__.__name__} can not "
                 f"be exported to ONNX. Please refer to the "
                 f"list of supported models,"
-                f"https://mmdetection.readthedocs.io/en/latest/tutorials/pytorch2onnx.html#list-of-supported-models-exportable-to-onnx"  # noqa E501
+                f"https://mmdetection.readthedocs.io/en/latest/tutorials/pytorch2onnx.html#list-of-supported-models-exportable-to-onnx"
+            )
+            raise NotImplementedError(
+                msg  # noqa E501
             )
