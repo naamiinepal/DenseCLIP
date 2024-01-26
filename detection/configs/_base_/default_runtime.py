@@ -3,14 +3,14 @@ checkpoint_config = dict(interval=1)
 log_config = dict(
     interval=50,
     hooks=[
-        dict(type='TextLoggerHook'),
+        dict(type="TextLoggerHook"),
         # dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
-dist_params = dict(backend='nccl')
-log_level = 'INFO'
+dist_params = dict(backend="nccl")
+log_level = "INFO"
 load_from = None
 resume_from = None
-workflow = [('train', 1)]
-#fp16 = dict(loss_scale=512.)
+workflow = [("train", 1)]
+# fp16 = dict(loss_scale=512.)
 find_unused_parameters = True
